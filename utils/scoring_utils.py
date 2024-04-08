@@ -39,10 +39,16 @@ def get_dataset_scores(scores, metadata, args=None):
         clip_list = sorted(
             fn.replace("alphapose_tracked_person.json", "tracks.txt") for fn in clip_list if fn.endswith('.json'))
         per_frame_scores_root = 'data/UBnormal/gt/'
-    else:
+    elif args.dataset == 'ShanghaiTech':
         per_frame_scores_root = 'data/ShanghaiTech/gt/test_frame_mask/'
         clip_list = os.listdir(per_frame_scores_root)
         clip_list = sorted(fn for fn in clip_list if fn.endswith('.npy'))
+    elif args.dataset == 'AIHub':
+        pose_segs_root = 'data/AIHub/pose/test'
+        clip_list = os.listdir(pose_segs_root)
+        clip_list = sorted(
+            fn.replace("_alphapose_tracked_person.json", ".npy") for fn in clip_list if fn.endswith('.json'))
+        per_frame_scores_root = 'data/AIHub/gt/'
 
     print("Scoring {} clips".format(len(clip_list)))
     for clip in tqdm(clip_list):
@@ -81,10 +87,13 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
     if args.dataset == 'UBnormal':
         type, scene_id, clip_id = re.findall('(abnormal|normal)_scene_(\d+)_scenario(.*)_tracks.*', clip)[0]
         clip_id = type + "_" + clip_id
-    else:
+    elif args.dataset == 'ShanghaiTech':
         scene_id, clip_id = [int(i) for i in clip.replace("label", "001").split('.')[0].split('_')]
         if shanghaitech_hr_skip((args.dataset == 'ShanghaiTech-HR'), scene_id, clip_id):
             return None, None
+    elif args.dataset == "AIHub":
+        scene_id, clip_id = \
+            re.findall('C021_*_S(\d+)_(.*)_alphapose_.*', clip)[0]
     clip_metadata_inds = np.where((metadata_np[:, 1] == clip_id) &
                                   (metadata_np[:, 0] == scene_id))[0]
     clip_metadata = metadata[clip_metadata_inds]

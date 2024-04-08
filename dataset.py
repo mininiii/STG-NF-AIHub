@@ -175,10 +175,15 @@ def gen_dataset(person_json_root, num_clips=None, kp18_format=True, ret_keys=Fal
             type, scene_id, clip_id = \
                 re.findall('(abnormal|normal)_scene_(\d+)_scenario(.*)_alphapose_.*', person_dict_fn)[0]
             clip_id = type + "_" + clip_id
-        else:
+        elif dataset == "ShanghaiTech":
             scene_id, clip_id = person_dict_fn.split('_')[:2]
             if shanghaitech_hr_skip(dataset=="ShaghaiTech-HR", scene_id, clip_id):
                 continue
+        elif dataset == "AIHub":
+            scene_id, clip_id = \
+                re.findall('C021_*_S(\d+)_(.*)_alphapose_.*', person_dict_fn)[0]
+                # abnormal_scene_1_scenario_1_alphapose_tracked_person.json
+                # C021_A20_SY15_P01_S01_01DAS_alphapose_tracked_person.json
         clip_json_path = os.path.join(person_json_root, person_dict_fn)
         with open(clip_json_path, 'r') as f:
             clip_dict = json.load(f)

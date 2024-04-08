@@ -49,7 +49,7 @@ def create_command(alphapose_dir, video_filename, out_dir, is_video=False):
                     'outdir': out_dir}
 
     # command = "python ./AlphaPose/scripts/demo_inference.py"
-    command = "python scripts/demo_inference.py"
+    command = "python3 scripts/demo_inference.py"
 
     # loop over command line argument and add to command
     for key, val in command_args.items():
@@ -60,7 +60,7 @@ def create_command(alphapose_dir, video_filename, out_dir, is_video=False):
         command += ' --indir ' + video_filename
     command += ' --sp'  # Torch Re-ID Track
     command += ' --pose_track'  # Torch Re-ID Track
-    # command += ' --detector yolox-x'  # Simple MOT Track
+    command += ' --detector yolox'  # Simple MOT Track
 
     return command
 
@@ -79,6 +79,7 @@ def main():
     curr_dir = os.path.dirname(os.path.realpath(__file__))
     img_dirs = []
     output_files = os.listdir(args.outdir)
+    print(list(os.listdir(root)))
     for path, subdirs, files in os.walk(root):
         for name in files:
             run_pose = False
