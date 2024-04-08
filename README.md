@@ -86,12 +86,13 @@ Use the flag --video for video folder, otherwise assumes a folder of JPG/PNG ima
 
 필요한 모델들 미리 다 다운받아야함. (위의 링크 참고)
 
-Pose extracting/tracking:
+## Pose extracting/tracking:
 ```
 python3 gen_data.py --dir {데이터셋 폴더 경로} --outdir {결과 저장 경로} --alphapose_dir {AlphaPose clone해온 폴더 경로} --video
 ```
-
-ground truth 생성 파일 본인 경로로 수정해야함
+- AlphaPose 클론 후 실행 전에
+  ```python setup.py build develop 필수```
+- ground truth 생성 파일 본인 경로로 수정해야함
 
 ## Training/Testing
 Training and Evaluating is run using:
