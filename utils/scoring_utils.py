@@ -48,12 +48,13 @@ def get_dataset_scores(scores, metadata, args=None):
         pose_segs_root = 'data/AIHub/pose/test'
         clip_list = os.listdir(pose_segs_root)
         clip_list = sorted(
-            fn.replace("_alphapose_tracked_person.json", ".npy") for fn in clip_list if fn.endswith('.json'))
+            fn.replace("_alphapose_tracked_person.json", ".npy") for fn in clip_list if fn.endswith('_alphapose_tracked_person.json'))
         per_frame_scores_root = 'data/AIHub/gt/'
 
     print("Scoring {} clips".format(len(clip_list)))
     for clip in tqdm(clip_list):
         clip_gt, clip_score = get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, args)
+        print(clip_score)
         if clip_score is not None:
             dataset_gt_arr.append(clip_gt)
             dataset_scores_arr.append(clip_score)
@@ -85,7 +86,6 @@ def smooth_scores(scores_arr, sigma=7):
 
 
 def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, args):
-    print(clip)
     if args.dataset == 'UBnormal':
         type, scene_id, clip_id = re.findall('(abnormal|normal)_scene_(\d+)_scenario(.*)_tracks.*', clip)[0]
         clip_id = type + "_" + clip_id
@@ -95,9 +95,8 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
             return None, None
     #! AIHub custom 수정 !#
     elif args.dataset == "AIHub":
-        match = re.search('C021_.*_S(\d+)_([^_]+)_alphapose', clip)
-        if match:
-            scene_id, clip_id = match.groups()
+        type, scene_id, clip_id = re.findall('C(\d+)_.*_SY(\d+)_([^_]+)', clip)[0]
+        clip_id = type + "_" + clip_id
             
     clip_metadata_inds = np.where((metadata_np[:, 1] == clip_id) &
                                   (metadata_np[:, 0] == scene_id))[0]

@@ -28,15 +28,11 @@ def main():
         torch.manual_seed(args.seed)
         np.random.seed(0)
 
-
     args, model_args = init_sub_args(args)
-    
-    pretrained = vars(args).get('checkpoint', None)
-    dataset, loader = get_dataset_and_loader(args, trans_list=trans_list, only_test=(pretrained is not None))
-
-    
     args.ckpt_dir = create_exp_dirs(args.exp_dir, dirmap=args.dataset)
 
+    pretrained = vars(args).get('checkpoint', None)
+    dataset, loader = get_dataset_and_loader(args, trans_list=trans_list, only_test=(pretrained is not None))
 
     model_args = init_model_params(args, dataset)
     model = STG_NF(**model_args)

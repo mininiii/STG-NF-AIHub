@@ -181,9 +181,10 @@ def gen_dataset(person_json_root, num_clips=None, kp18_format=True, ret_keys=Fal
                 continue
         #! AIHub custom 수정 !#
         elif dataset == "AIHub":
-            match = re.search(r'C021_.*_S(\d+)_([^_]+)_alphapose', person_dict_fn)
-            if match:
-                scene_id, clip_id = match.groups()
+            type, scene_id, clip_id = \
+                re.findall('C(\d+)_.*_S(\d+)_([^_]+)_alphapose.*', person_dict_fn)[0]
+            clip_id = type + "_" + clip_id
+            
         clip_json_path = os.path.join(person_json_root, person_dict_fn)
         with open(clip_json_path, 'r') as f:
             clip_dict = json.load(f)

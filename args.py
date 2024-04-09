@@ -12,8 +12,11 @@ def init_args():
 
 def init_sub_args(args):
     #! AIHub custom 수정 !#
-    dataset = "UBnormal" if args.dataset == "AIHub" else "ShanghaiTech"
-    if args.dataset == "AIHub": dataset = "AIHub"
+    if args.dataset == "UBnormal": 
+        dataset = "UBnormal" 
+    elif args.dataset == "ShanghaiTech": dataset = "ShanghaiTech"
+    elif args.dataset == "AIHub": dataset = "AIHub"
+    
     if args.vid_path_train and args.vid_path_test and args.pose_path_train and args.pose_path_test:
         args.vid_path = {'train': args.vid_path_train,
                          'test': args.vid_path_test}
