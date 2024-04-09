@@ -23,8 +23,8 @@ def process_json_file(directory_path, json_file):
             end_frame = int(block['end_frame_index'])
             ground_truth[start_frame:end_frame + 1] = 1
 
-    # 텍스트 파일로 저장
-    output_file_path = os.path.join('/home/myyang/projects/STG-NF/data/AIHub/gt/', file_name[:-5] + '.txt')
+    # 넘파이 파일로 저장
+    output_file_path = os.path.join('/home/myyang/projects/STG-NF/data/AIHub/gt/', file_name[:-5])
     np.save(output_file_path, ground_truth)
     print(f"Processed: {json_file_path}")
 

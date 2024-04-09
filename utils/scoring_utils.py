@@ -43,6 +43,7 @@ def get_dataset_scores(scores, metadata, args=None):
         per_frame_scores_root = 'data/ShanghaiTech/gt/test_frame_mask/'
         clip_list = os.listdir(per_frame_scores_root)
         clip_list = sorted(fn for fn in clip_list if fn.endswith('.npy'))
+    #! AIHub custom 수정 !#
     elif args.dataset == 'AIHub':
         pose_segs_root = 'data/AIHub/pose/test'
         clip_list = os.listdir(pose_segs_root)
@@ -91,9 +92,12 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
         scene_id, clip_id = [int(i) for i in clip.replace("label", "001").split('.')[0].split('_')]
         if shanghaitech_hr_skip((args.dataset == 'ShanghaiTech-HR'), scene_id, clip_id):
             return None, None
+    #! AIHub custom 수정 !#
     elif args.dataset == "AIHub":
-        scene_id, clip_id = \
-            re.findall('C021_*_S(\d+)_(.*)_alphapose_.*', clip)[0]
+        match = re.search('C021_.*_S(\d+)_([^_]+)_alphapose', clip)
+        if match:
+            scene_id, clip_id = match.groups()
+            
     clip_metadata_inds = np.where((metadata_np[:, 1] == clip_id) &
                                   (metadata_np[:, 0] == scene_id))[0]
     clip_metadata = metadata[clip_metadata_inds]

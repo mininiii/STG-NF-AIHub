@@ -71,6 +71,7 @@ def gen_clip_seg_data_np(clip_dict, start_ofst=0, seg_stride=4, seg_len=12, scen
     person_keys = {}
     for idx in sorted(clip_dict.keys(), key=lambda x: int(x)):
         sing_pose_np, sing_pose_meta, sing_pose_keys, sing_scores_np = single_pose_dict2np(clip_dict, idx)
+        #! AIHub custom 수정 !#
         if dataset == "UBnormal" or "AIHub":
             key = ('{:02d}_{}_{:02d}'.format(int(scene_id), clip_id, int(idx)))
         else:
@@ -173,6 +174,7 @@ def split_pose_to_segments(single_pose_np, single_pose_meta, single_pose_keys, s
             curr_score = single_score_np[start_ind:start_ind + seg_len].reshape(1, seg_len)
             pose_segs_np = np.append(pose_segs_np, curr_segment, axis=0)
             pose_score_np = np.append(pose_score_np, curr_score, axis=0)
+            #! AIHub custom 수정 !#
             if dataset == "UBnormal" or "AIHub":
                 pose_segs_meta.append([int(scene_id), clip_id, int(single_pose_meta[0]), int(start_key)])
             else:

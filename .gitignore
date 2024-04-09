@@ -200,6 +200,7 @@ dmypy.json
 #
 data/ShanghaiTech/pose/
 data/UBnormal/pose/
+#! AIHub custom 수정 !#
 data/AIHub/pose
 runs/*
 data/exp_dir/*
