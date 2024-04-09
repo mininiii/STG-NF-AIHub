@@ -91,8 +91,12 @@ Use the flag --video for video folder, otherwise assumes a folder of JPG/PNG ima
 python3 gen_data.py --dir {데이터셋 폴더 경로} --outdir {결과 저장 경로} --alphapose_dir {AlphaPose clone해온 폴더 경로} --video
 ```
 - AlphaPose 클론 후 실행 전에
-  ```python setup.py build develop 필수```
-- ground truth 생성 파일 본인 경로로 수정해야함
+  ```python setup.py build develop``` 필수
+
+## ground truth 생성:
+```
+python3 gen_gt.py --train_label {train 라벨 폴더 경로} --test_label {test 라벨 폴더 경로}
+```
 
 ## Training/Testing
 Training and Evaluating is run using:
@@ -113,6 +117,10 @@ python train_eval.py --dataset UBnormal --seg_len 16 --checkpoint checkpoints/UB
 Supervised UBnormal
 ```
 python train_eval.py --dataset UBnormal --seg_len 16 --R 10 --checkpoint checkpoints/UBnormal_supervised_79_2.tar
+```
+AIHub
+```
+python3 train_eval.py --dataset AIHub --checkpoint ./data/exp_dir/AIHub/Apr09_0734/Apr09_0736__checkpoint.pth.tar
 ```
 
 ## Acknowledgments
