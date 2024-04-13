@@ -54,7 +54,6 @@ def get_dataset_scores(scores, metadata, args=None):
     print("Scoring {} clips".format(len(clip_list)))
     for clip in tqdm(clip_list):
         clip_gt, clip_score = get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, args)
-        print(clip_score)
         if clip_score is not None:
             dataset_gt_arr.append(clip_gt)
             dataset_scores_arr.append(clip_score)
@@ -95,9 +94,12 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
             return None, None
     #! AIHub custom 수정 !#
     elif args.dataset == "AIHub":
-        type, scene_id, clip_id = re.findall('C(\d+)_.*_SY(\d+)_([^_]+)', clip)[0]
-        clip_id = type + "_" + clip_id
-            
+        # A20이런거 (이상행동 종류) 도 포함해서 구성하도록.
+        type, scene_id, clip_id, id2, id3 = re.findall('C(\d+)_.*_SY(\d+)_P(\d+)_S(\d+)_(.*).npy', clip)[0]
+        # C021_A20_SY15_P01_S01_01DAS
+        clip_id = type + "_" + clip_id + "_" + id3
+        scene_id = scene_id + "_" + id2
+        
     clip_metadata_inds = np.where((metadata_np[:, 1] == clip_id) &
                                   (metadata_np[:, 0] == scene_id))[0]
     clip_metadata = metadata[clip_metadata_inds]
@@ -111,7 +113,6 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
         clip_person_scores_dict = {0: np.copy(scores_zeros)}
     else:
         clip_person_scores_dict = {i: np.copy(scores_zeros) for i in clip_fig_idxs}
-
     for person_id in clip_fig_idxs:
         person_metadata_inds = \
             np.where(

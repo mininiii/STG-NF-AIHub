@@ -120,7 +120,7 @@ python train_eval.py --dataset UBnormal --seg_len 16 --R 10 --checkpoint checkpo
 ```
 AIHub
 ```
-python3 train_eval.py --dataset AIHub --checkpoint ./data/exp_dir/AIHub/Apr09_0734/Apr09_0736__checkpoint.pth.tar
+python3 train_eval.py --dataset AIHub --checkpoint /data/exp_dir/AIHub/Apr11_1229/Apr11_1230__checkpoint.pth.tar
 ```
 
 ## Acknowledgments

@@ -61,6 +61,7 @@ def create_command(alphapose_dir, video_filename, out_dir, is_video=False):
     command += ' --sp'  # Torch Re-ID Track
     command += ' --pose_track'  # Torch Re-ID Track
     command += ' --detector yolox'  # Simple MOT Track
+    # command += ' --board'
 
     return command
 

@@ -8,7 +8,8 @@ import shutil
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 def adjust_lr(optimizer, epoch, lr=None, lr_decay=None, scheduler=None):
     if scheduler is not None:
@@ -43,8 +44,9 @@ class Trainer:
                  optimizer_f=None, scheduler_f=None):
         self.model = model
         self.args = args
-        self.train_loader = train_loader
         self.test_loader = test_loader
+        self.train_loader = train_loader
+        self.args.image_save_interval = 5
         # Loss, Optimizer and Scheduler
         if optimizer_f is None:
             self.optimizer = self.get_optimizer()
@@ -134,6 +136,14 @@ class Trainer:
                     self.optimizer.zero_grad()
                     pbar.set_description("Loss: {}".format(losses.item()))
                     log_writer.add_scalar('NLL Loss', losses.item(), epoch * len(self.train_loader) + itern)
+                    
+                    # 모델 구조 시각화
+                    if itern == 0:
+                        log_writer.add_graph(self.model, samp.float())
+                    
+                    # # 배치에 포함된 이미지와 모델의 예측 결과 비교하여 이미지 생성 및 저장
+                    # if itern % self.args.image_save_interval == 0:
+                    #     self.save_images(samp.float(), label, epoch + 1, z, itern)
 
                 except KeyboardInterrupt:
                     print('Keyboard Interrupted. Save results? [yes/no]')
@@ -147,6 +157,28 @@ class Trainer:
             self.save_checkpoint(epoch, filename=checkpoint_filename)
             new_lr = self.adjust_lr(epoch)
             print('Checkpoint Saved. New LR: {0:.3e}'.format(new_lr))
+            
+    # def save_images(self, data, label, epoch, predicted, iteration):
+    #     # 배치에 포함된 이미지를 그리드 형태로 결합
+    #     image_grid = vutils.make_grid(data.cpu(), normalize=True, scale_each=True)        
+    #     # 그래프를 화면에 표시
+    #     plt.figure(figsize=(10, 10))
+    #     plt.imshow(image_grid.permute(1, 2, 0))
+    #     plt.title('Predicted vs Ground Truth (Epoch {}, Iteration {})'.format(epoch, iteration))
+    #     plt.axis('off')
+
+    #     # 각 이미지의 예측 결과와 정답을 이미지 위에 텍스트로 표시
+    #     for i, (predicted_label, true_label) in enumerate(zip(predicted, label)):
+    #         plt.text(5 + 64 * (i % 4), 75 + 64 * (i // 4),
+    #                  'Predicted: {}\nTrue: {}'.format(predicted_label.item(), true_label.item()),
+    #                  color='white', backgroundcolor='black', fontsize=8)
+
+    #     # 이미지를 파일로 저장
+    #     save_path = os.path.join(self.args.image_save_dir, 'epoch{}_iter{}.png'.format(epoch, iteration))
+    #     plt.savefig(save_path)
+
+    #     # 이미지를 닫습니다.
+    #     plt.close()
 
     def test(self):
         self.model.eval()
