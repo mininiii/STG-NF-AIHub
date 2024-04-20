@@ -37,9 +37,14 @@ def main():
     model_args = init_model_params(args, dataset)
     model = STG_NF(**model_args)
     num_of_params = calc_num_of_params(model)
+    
+    print(f"Model: {model.__class__.__name__} with {num_of_params} parameters")
+
     trainer = Trainer(args, model, loader['train'], loader['test'],
                       optimizer_f=init_optimizer(args.model_optimizer, lr=args.model_lr),
                       scheduler_f=init_scheduler(args.model_sched, lr=args.model_lr, epochs=args.epochs))
+    print(f"Batch size: {args.batch_size} with {args.epochs} epochs and lr: {args.model_lr}")
+    
     if pretrained:
         trainer.load_checkpoint(pretrained)
     else:

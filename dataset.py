@@ -181,11 +181,11 @@ def gen_dataset(person_json_root, num_clips=None, kp18_format=True, ret_keys=Fal
                 continue
         #! AIHub custom 수정 !#
         elif dataset == "AIHub":
-            type, scene_id, clip_id, id2, id3 = \
-                re.findall('C(\d+)_.*_SY(\d+)_P(\d+)_S(\d+)_(.*)_alphapose.*', person_dict_fn)[0]
+            type, class_id, scene_id, clip_id, id2, id3 = \
+                re.findall('C(\d+)_A(\d+)_SY(\d+)_P(\d+)_S(\d+)_(.*)_alphapose_.*', person_dict_fn)[0]
             
             # type, scene_id, clip_id, id2, id3 = re.findall('C(\d+)_.*_SY(\d+)_P(\d+)_S(\d+)_(.*)', clip)[0]
-            clip_id = type + "_" + clip_id + "_" + id3
+            clip_id = type + "_" + class_id + "_" + clip_id + "_" + id3
             scene_id = scene_id + "_" + id2
         
         clip_json_path = os.path.join(person_json_root, person_dict_fn)

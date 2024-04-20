@@ -10,6 +10,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
+import torchvision
 
 def adjust_lr(optimizer, epoch, lr=None, lr_decay=None, scheduler=None):
     if scheduler is not None:
@@ -101,7 +102,66 @@ class Trainer:
                   .format(filename, checkpoint['epoch']))
         except FileNotFoundError:
             print("No checkpoint exists from '{}'. Skipping...\n".format(self.args.ckpt_dir))
+    def _visualize_normalized_pose_tensorboard(self, pose_data, step, writer):
+        # 포즈 데이터의 크기는 [N, T, V, F] 형식입니다.
+        # N은 배치 크기, T는 시간 스텝, V는 포즈 지점의 수, F는 포즈 지점의 특징 수입니다.
+        # 여기서는 T를 이용하여 각 시간 스텝에서의 포즈를 시각화합니다.
+        batch_size, time_steps, num_vertices, num_features = pose_data.shape
 
+        # 시간 스텝을 하나씩 반복하며 포즈를 시각화합니다.
+        for t in range(time_steps):
+            # 해당 시간 스텝의 포즈 데이터를 가져옵니다.
+            frame_pose = pose_data[:, t, :, :]  # shape: [N, V, F]
+            # 호스트 메모리로 이동시키기
+            frame_pose = frame_pose.cpu().numpy()
+            # 각 샘플(배치)별로 포즈를 시각화합니다.
+            for i in range(batch_size):
+                plt.figure()
+                plt.title(f'Normalized Pose (Step: {step}, Batch: {i}, Time Step: {t})')
+                plt.xlim(-1, 1)  # 이미지 크기에 따라 조절합니다.
+                plt.ylim(-1, 1)  # 이미지 크기에 따라 조절합니다.
+                plt.scatter(frame_pose[i, :, 0], frame_pose[i, :, 1], c='r')  # x, y 좌표를 사용하여 키포인트를 시각화합니다.
+
+                # 이미지를 파일로 저장 (옵션)
+                # save_path = f"pose_image_{step}_{i}_{t}.png"
+                # plt.savefig(save_path)
+
+                # 이미지를 텐서보드에 추가합니다.
+                # 이미지를 파일로 저장하고, 해당 파일을 읽어서 텐서보드에 추가하는 방식도 가능합니다.
+                # writer.add_image(f'Pose Image/Step_{step}/Batch_{i}/TimeStep_{t}', plt.imread(save_path), step)
+                writer.add_figure(f'Pose Image/Step_{step}/Batch_{i}/TimeStep_{t}', plt.gcf(), step)
+
+                # 이미지를 닫습니다.
+                plt.close()
+    def _visualize_normalized_pose_tensorboard(self, pose_data, step, log_writer):
+        # 원래 이미지의 크기에 맞게 키포인트 좌표를 배치합니다.
+        # pose_data의 크기는 [Frames, Keypoints, Features]입니다.
+        # 예를 들어, pose_data의 shape가 (12, 18, 3)이라면, 12프레임에 걸쳐 18개의 키포인트가 각각 (x, y, score) 형태로 있습니다.
+        # 이를 (x, y) 형태로 변경하고, 원래 이미지의 크기에 맞게 스케일링합니다.
+        print(pose_data.shape)
+        normalized_pose = pose_data[:, :, :2]  # (x, y) 좌표만 선택합니다.
+        normalized_pose = (normalized_pose + 1) / 2  # [-1, 1] 범위에서 [0, 1] 범위로 변환합니다.
+
+        # 호스트 메모리로 이동시키기
+        normalized_pose = normalized_pose.cpu().numpy()
+
+        # 각 프레임별로 키포인트를 시각화하고 이미지를 저장합니다.
+        for i, frame_pose in enumerate(normalized_pose):
+            plt.figure()
+            plt.title('Normalized Pose')
+            plt.xlim(0, 1)  # 이미지 크기에 따라 조절합니다.
+            plt.ylim(0, 1)  # 이미지 크기에 따라 조절합니다.
+            plt.scatter(frame_pose[:, 0], frame_pose[:, 1], c='r')  # x, y 좌표를 사용하여 키포인트를 시각화합니다.
+
+            # 이미지를 파일로 저장
+            save_path = f"pose_image_{step}_{i}.png"
+            plt.savefig(save_path)
+            plt.close()
+
+            # 텐서보드에 이미지를 추가
+            image = torchvision.io.read_image(save_path)
+            log_writer.add_image(f'Pose Image/Step_{step}/Frame_{i}', image, step)
+        
     def train(self, log_writer=None, clip=100):
         time_str = time.strftime("%b%d_%H%M_")
         checkpoint_filename = time_str + '_checkpoint.pth.tar'
@@ -139,6 +199,7 @@ class Trainer:
                     
                     # 모델 구조 시각화
                     if itern == 0:
+                        # self.visualize_normalized_pose_tensorboard(samp.float(), itern, log_writer)
                         log_writer.add_graph(self.model, samp.float())
                     
                     # # 배치에 포함된 이미지와 모델의 예측 결과 비교하여 이미지 생성 및 저장
@@ -157,28 +218,6 @@ class Trainer:
             self.save_checkpoint(epoch, filename=checkpoint_filename)
             new_lr = self.adjust_lr(epoch)
             print('Checkpoint Saved. New LR: {0:.3e}'.format(new_lr))
-            
-    # def save_images(self, data, label, epoch, predicted, iteration):
-    #     # 배치에 포함된 이미지를 그리드 형태로 결합
-    #     image_grid = vutils.make_grid(data.cpu(), normalize=True, scale_each=True)        
-    #     # 그래프를 화면에 표시
-    #     plt.figure(figsize=(10, 10))
-    #     plt.imshow(image_grid.permute(1, 2, 0))
-    #     plt.title('Predicted vs Ground Truth (Epoch {}, Iteration {})'.format(epoch, iteration))
-    #     plt.axis('off')
-
-    #     # 각 이미지의 예측 결과와 정답을 이미지 위에 텍스트로 표시
-    #     for i, (predicted_label, true_label) in enumerate(zip(predicted, label)):
-    #         plt.text(5 + 64 * (i % 4), 75 + 64 * (i // 4),
-    #                  'Predicted: {}\nTrue: {}'.format(predicted_label.item(), true_label.item()),
-    #                  color='white', backgroundcolor='black', fontsize=8)
-
-    #     # 이미지를 파일로 저장
-    #     save_path = os.path.join(self.args.image_save_dir, 'epoch{}_iter{}.png'.format(epoch, iteration))
-    #     plt.savefig(save_path)
-
-    #     # 이미지를 닫습니다.
-    #     plt.close()
 
     def test(self):
         self.model.eval()

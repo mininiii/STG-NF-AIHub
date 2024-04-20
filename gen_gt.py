@@ -8,10 +8,12 @@ import argparse
 <example>
 python3 gen_gt.py --train_label /home/myyang/projects/dataset/AIHub/zipfiles/training/label/invation/look_inside 
 --test_label /home/myyang/projects/dataset/AIHub/zipfiles/validation/unzip/look_inside/label
+
+python3 gen_gt.py --train_label /dataset/aihub_data_upload/labeling_data_train --test_label /dataset/aihub_data_upload/labeling_data_val
 '''
 
 # train 영상 데이터셋에 대한 label 파일 경로
-# TRAIN_LABEL_PATH = '/home/myyang/projects/dataset/AIHub/zipfiles/training/label/invation/look_inside'
+# TRAIN_LABEL_PATH = '/home/myyang/projects/dataset/AIHub/zipfiles/t raining/label/invation/look_inside'
 # # test(validation) 영상 데이터셋에 대한 label 파일 경로
 # TEST_LABEL_PATH = '/home/myyang/projects/dataset/AIHub/zipfiles/validation/unzip/look_inside/label'
 
@@ -24,8 +26,8 @@ POSE_PATH = f'./data/AIHub/pose/'
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Process label paths.')
-    parser.add_argument('--train_label', type=str, required=True, help='Path to the train label directory.')
-    parser.add_argument('--test_label', type=str, required=True, help='Path to the test label directory.')
+    parser.add_argument('--train_label', type=str, required=False, help='Path to the train label directory.')
+    parser.add_argument('--test_label', type=str, required=False, help='Path to the test label directory.')
     return parser.parse_args()
 
 def process_json_file(directory_path, json_file):
@@ -54,7 +56,6 @@ def find_files(type, path):
 # 디렉토리 내의 모든 .json 파일 찾기
     directory_path = f'{POSE_PATH}{type}'
     json_files = [f for f in os.listdir(directory_path) if f.endswith('alphapose_tracked_person.json')]
-    
     # 학습할 pose 파일에 맞는 labal 찾기
     filepath = path
     for json_file in json_files:
@@ -62,9 +63,10 @@ def find_files(type, path):
 
 
 args = parse_arguments()
-    
-train_label_path = args.train_label
-test_label_path = args.test_label
 
-find_files('train', train_label_path)
-find_files('test', test_label_path)
+if args.train_label:
+    train_label_path = args.train_label
+    find_files('train', train_label_path)
+if args.test_label:
+    test_label_path = args.test_label
+    find_files('test', test_label_path)

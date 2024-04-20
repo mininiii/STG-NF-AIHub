@@ -18,6 +18,68 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
+
+def _score_dataset(score, metadata, args=None):
+    gt_arr, scores_arr = get_dataset_scores(score, metadata, args=args)
+    scores_arr = smooth_scores(scores_arr)
+    gt_np = np.concatenate(gt_arr)
+    scores_np = np.concatenate(scores_arr)
+    auc = score_auc(scores_np, gt_np)
+
+    # TensorBoard writer 생성
+    # writer = SummaryWriter()
+
+    # 새로운 Figure 객체 생성
+    # fig = plt.figure()
+
+    # # 데이터별 그래프 생성
+    # for i, (gt, scores) in enumerate(zip(gt_arr, scores_arr)):
+    #     # 그래프 그리기
+    #     plot_scores(fig, scores, gt, writer, tag=f'Dataset {i+1}')
+
+    # # AUC 기록
+    # writer.add_scalar('AUC', auc, global_step=0)
+
+    # TensorBoard writer 닫기
+    # writer.close()
+
+    return auc, scores_np
+from sklearn.preprocessing import MinMaxScaler
+
+def scale_scores(scores, new_min=-5, new_max=0):
+    old_min = min(scores)
+    old_max = max(scores)
+    # old_max = 0
+    print(old_min, old_max)
+    if old_max == old_min:
+        # 기존 최댓값과 최솟값이 같은 경우에는 스케일링을 수행하지 않고 원래 값 그대로 반환
+        scaled_scores = scores
+    else:
+        scaled_scores = ((scores - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+    return scaled_scores
+
+def plot_scores(fig, scores, gt, writer, tag):
+    # scores = scale_scores(scores)
+    scores = gaussian_filter1d(scores, sigma=7)
+    # Plot the scores
+    plt.plot(range(len(scores)), scores, label='Scores')
+    # plt.ylim(-5, 0)
+    # plt.fill_between(range(len(gt)), -5, 0, where=(gt == 0), color='lightcoral', alpha=0.1)
+    gt_indices = np.where(gt == 0)[0]
+    for idx in gt_indices:
+        plt.axvspan(idx, idx+1, color='lightcoral', alpha=0.1)
+    
+    # Add legend and labels
+    plt.legend()
+    plt.xlabel('Frame')
+    plt.ylabel('Log-Likelihood Score')
+    plt.title('Scores with GT Highlighted')
+    
+    # Add the figure to TensorBoard
+    writer.add_figure(tag, fig)
+
 
 def score_dataset(score, metadata, args=None):
     gt_arr, scores_arr = get_dataset_scores(score, metadata, args=args)
@@ -28,7 +90,7 @@ def score_dataset(score, metadata, args=None):
     return auc, scores_np
 
 
-def get_dataset_scores(scores, metadata, args=None):
+def _get_dataset_scores(scores, metadata, args=None):
     dataset_gt_arr = []
     dataset_scores_arr = []
     metadata_np = np.array(metadata)
@@ -68,6 +130,54 @@ def get_dataset_scores(scores, metadata, args=None):
             index += 1
 
     return dataset_gt_arr, dataset_scores_arr
+def get_dataset_scores(scores, metadata, args=None):
+    dataset_gt_arr = []
+    dataset_scores_arr = []
+    metadata_np = np.array(metadata)
+
+    if args.dataset == 'UBnormal':
+        pose_segs_root = 'data/UBnormal/pose/test'
+        clip_list = os.listdir(pose_segs_root)
+        clip_list = sorted(
+            fn.replace("alphapose_tracked_person.json", "tracks.txt") for fn in clip_list if fn.endswith('.json'))
+        per_frame_scores_root = 'data/UBnormal/gt/'
+    elif args.dataset == 'ShanghaiTech':
+        per_frame_scores_root = 'data/ShanghaiTech/gt/test_frame_mask/'
+        clip_list = os.listdir(per_frame_scores_root)
+        clip_list = sorted(fn for fn in clip_list if fn.endswith('.npy'))
+    #! AIHub custom 수정 !#
+    elif args.dataset == 'AIHub':
+        pose_segs_root = 'data/AIHub/pose/test'
+        clip_list = os.listdir(pose_segs_root)
+        clip_list = sorted(
+            fn.replace("_alphapose_tracked_person.json", ".npy") for fn in clip_list if fn.endswith('_alphapose_tracked_person.json'))
+        per_frame_scores_root = 'data/AIHub/gt/'
+
+    # TensorBoard writer 생성
+    writer = SummaryWriter()
+    print("Scoring {} clips".format(len(clip_list)))
+    for clip in tqdm(clip_list):
+        clip_gt, clip_score = get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, args)
+        if clip_score is not None:
+            dataset_gt_arr.append(clip_gt)
+            dataset_scores_arr.append(clip_score)
+
+            # 각 클립마다 스코어를 저장할 때마다 새로운 그래프 생성
+            fig = plt.figure()
+            plot_scores(fig, clip_score, clip_gt, writer, tag=f'Clip: {clip}')
+            plt.close(fig)
+    writer.close()
+
+    scores_np = np.concatenate(dataset_scores_arr, axis=0)
+    scores_np[scores_np == np.inf] = scores_np[scores_np != np.inf].max()
+    scores_np[scores_np == -1 * np.inf] = scores_np[scores_np != -1 * np.inf].min()
+    index = 0
+    for score in range(len(dataset_scores_arr)):
+        for t in range(dataset_scores_arr[score].shape[0]):
+            dataset_scores_arr[score][t] = scores_np[index]
+            index += 1
+
+    return dataset_gt_arr, dataset_scores_arr
 
 
 def score_auc(scores_np, gt):
@@ -95,10 +205,16 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
     #! AIHub custom 수정 !#
     elif args.dataset == "AIHub":
         # A20이런거 (이상행동 종류) 도 포함해서 구성하도록.
-        type, scene_id, clip_id, id2, id3 = re.findall('C(\d+)_.*_SY(\d+)_P(\d+)_S(\d+)_(.*).npy', clip)[0]
-        # C021_A20_SY15_P01_S01_01DAS
-        clip_id = type + "_" + clip_id + "_" + id3
+        # type, scene_id, clip_id, id2, id3 = re.findall('C(\d+)_.*_SY(\d+)_P(\d+)_S(\d+)_(.*).npy', clip)[0]
+        
+        type, class_id, scene_id, clip_id, id2, id3 = \
+                re.findall('C(\d+)_A(\d+)_SY(\d+)_P(\d+)_S(\d+)_(.*).npy', clip)[0]
+            
+        clip_id = type + "_" + class_id + "_" + clip_id + "_" + id3
         scene_id = scene_id + "_" + id2
+        # # C021_A20_SY15_P01_S01_01DAS
+        # clip_id = type + "_" + clip_id + "_" + id3
+        # scene_id = scene_id + "_" + id2
         
     clip_metadata_inds = np.where((metadata_np[:, 1] == clip_id) &
                                   (metadata_np[:, 0] == scene_id))[0]
@@ -124,5 +240,5 @@ def get_clip_score(scores, clip, metadata_np, metadata, per_frame_scores_root, a
 
     clip_ppl_score_arr = np.stack(list(clip_person_scores_dict.values()))
     clip_score = np.amin(clip_ppl_score_arr, axis=0)
-
+    
     return clip_gt, clip_score
