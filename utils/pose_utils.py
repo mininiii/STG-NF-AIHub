@@ -9,54 +9,90 @@ from tqdm import tqdm
 plt.style.use('seaborn-ticks')
 
 
-def get_ab_labels(global_data_np_ab, segs_meta_ab, path_to_vid_dir='', segs_root=''):
+def get_ab_labels(global_data_np_ab, segs_meta_ab, path_to_vid_dir='', segs_root='', dataset="UBnormal"):
     pose_segs_root = segs_root
     clip_list = os.listdir(pose_segs_root)
-    clip_list = sorted(
-        fn.replace("alphapose_tracked_person.json", "annotations") for fn in clip_list if fn.endswith('.json'))
-    labels = np.ones_like(global_data_np_ab)
-    for clip in tqdm(clip_list):
-        type, scene_id, clip_id = re.findall('(abnormal|normal)_scene_(\d+)_scenario(.*)_annotations.*', clip)[0]
-        if type == "normal":
-            continue
-        clip_id = type + "_" + clip_id
-        clip_metadata_inds = np.where((segs_meta_ab[:, 1] == clip_id) &
-                                      (segs_meta_ab[:, 0] == scene_id))[0]
-        clip_metadata = segs_meta_ab[clip_metadata_inds]
-        clip_res_fn = os.path.join(path_to_vid_dir, "Scene{}".format(scene_id), clip)
-        filelist = sorted(os.listdir(clip_res_fn))
-        clip_gt_lst = [np.array(Image.open(os.path.join(clip_res_fn, fname)).convert('L')) for fname in filelist]
-        # FIX shape bug
-        clip_shapes = set([clip_gt.shape for clip_gt in clip_gt_lst])
-        min_width = min([clip_shape[0] for clip_shape in clip_shapes])
-        min_height = min([clip_shape[1] for clip_shape in clip_shapes])
-        clip_labels = np.array([clip_gt[:min_width, :min_height] for clip_gt in clip_gt_lst])
-        gt_file = os.path.join("data/UBnormal/gt", clip.replace("annotations", "tracks.txt"))
-        clip_gt = np.zeros_like(clip_labels)
-        with open(gt_file) as f:
-            abnormality = f.readlines()
-            for ab in abnormality:
-                i, start, end = ab.strip("\n").split(",")
-                for t in range(int(float(start)), int(float(end))):
-                    clip_gt[t][clip_labels[t] == int(float(i))] = 1
-        for t in range(clip_gt.shape[0]):
-            if (clip_gt[t] != 0).any():  # Has abnormal event
-                ab_metadata_inds = np.where(clip_metadata[:, 3].astype(int) == t)[0]
-                # seg = clip_segs[ab_metadata_inds][:, :2, 0]
-                clip_fig_idxs = set([arr[2] for arr in segs_meta_ab[ab_metadata_inds]])
-                for person_id in clip_fig_idxs:
-                    person_metadata_inds = np.where((segs_meta_ab[:, 1] == clip_id) &
-                                                    (segs_meta_ab[:, 0] == scene_id) &
-                                                    (segs_meta_ab[:, 2] == person_id) &
-                                                    (segs_meta_ab[:, 3].astype(int) == t))[0]
-                    data = np.floor(global_data_np_ab[person_metadata_inds].T).astype(int)
-                    if data.shape[-1] != 0:
-                        if clip_gt[t][
-                            np.clip(data[:, 0, 1], 0, clip_gt.shape[1] - 1),
-                            np.clip(data[:, 0, 0], 0, clip_gt.shape[2] - 1)
-                        ].sum() > data.shape[0] / 2:
-                            # This pose is abnormal
-                            labels[person_metadata_inds] = -1
+    if dataset == "UBnormal":
+        clip_list = sorted(
+            fn.replace("alphapose_tracked_person.json", "annotations") for fn in clip_list if fn.endswith('.json'))
+        labels = np.ones_like(global_data_np_ab)
+        for clip in tqdm(clip_list):
+            type, scene_id, clip_id = re.findall('(abnormal|normal)_scene_(\d+)_scenario(.*)_annotations.*', clip)[0]
+            if type == "normal":
+                continue
+            clip_id = type + "_" + clip_id
+            clip_metadata_inds = np.where((segs_meta_ab[:, 1] == clip_id) &
+                                        (segs_meta_ab[:, 0] == scene_id))[0]
+            clip_metadata = segs_meta_ab[clip_metadata_inds]
+            clip_res_fn = os.path.join(path_to_vid_dir, "Scene{}".format(scene_id), clip)
+            filelist = sorted(os.listdir(clip_res_fn))
+            clip_gt_lst = [np.array(Image.open(os.path.join(clip_res_fn, fname)).convert('L')) for fname in filelist]
+            # FIX shape bug
+            clip_shapes = set([clip_gt.shape for clip_gt in clip_gt_lst])
+            min_width = min([clip_shape[0] for clip_shape in clip_shapes])
+            min_height = min([clip_shape[1] for clip_shape in clip_shapes])
+            clip_labels = np.array([clip_gt[:min_width, :min_height] for clip_gt in clip_gt_lst])
+            gt_file = os.path.join("data/UBnormal/gt", clip.replace("annotations", "tracks.txt"))
+            clip_gt = np.zeros_like(clip_labels)
+            with open(gt_file) as f:
+                abnormality = f.readlines()
+                for ab in abnormality:
+                    i, start, end = ab.strip("\n").split(",")
+                    for t in range(int(float(start)), int(float(end))):
+                        clip_gt[t][clip_labels[t] == int(float(i))] = 1
+            for t in range(clip_gt.shape[0]):
+                if (clip_gt[t] != 0).any():  # Has abnormal event
+                    ab_metadata_inds = np.where(clip_metadata[:, 3].astype(int) == t)[0]
+                    # seg = clip_segs[ab_metadata_inds][:, :2, 0]
+                    clip_fig_idxs = set([arr[2] for arr in segs_meta_ab[ab_metadata_inds]])
+                    for person_id in clip_fig_idxs:
+                        person_metadata_inds = np.where((segs_meta_ab[:, 1] == clip_id) &
+                                                        (segs_meta_ab[:, 0] == scene_id) &
+                                                        (segs_meta_ab[:, 2] == person_id) &
+                                                        (segs_meta_ab[:, 3].astype(int) == t))[0]
+                        data = np.floor(global_data_np_ab[person_metadata_inds].T).astype(int)
+                        if data.shape[-1] != 0:
+                            if clip_gt[t][
+                                np.clip(data[:, 0, 1], 0, clip_gt.shape[1] - 1),
+                                np.clip(data[:, 0, 0], 0, clip_gt.shape[2] - 1)
+                            ].sum() > data.shape[0] / 2:
+                                # This pose is abnormal
+                                labels[person_metadata_inds] = -1
+    elif dataset == 'AIHub':
+        clip_list = sorted(
+            fn.replace("_alphapose_tracked_person.json", ".npy") for fn in clip_list if fn.endswith('alphapose_tracked_person.json'))
+        labels = np.ones_like(global_data_np_ab)
+        for clip in tqdm(clip_list):
+            type, class_id, scene_id, clip_id, id2, id3 = \
+                re.findall('C(\d+)_A(\d+)_SY(\d+)_P(\d+)_S(\d+)_(.*).*', clip)[0]
+            
+            clip_id = type + "_" + class_id + "_" + clip_id + "_" + id3
+            scene_id = scene_id + "_" + id2
+            clip_id = clip_id.replace(".npy", "")
+            clip_metadata_inds = np.where((segs_meta_ab[:, 1] == clip_id) &
+                                        (segs_meta_ab[:, 0] == scene_id))[0]
+            # print(scene_id, clip_id)
+            # print(clip_metadata_inds)
+
+
+            # clip_metadata_inds가 비어 있는 경우 처리
+            if len(clip_metadata_inds) == 0:
+                continue
+
+            clip_metadata = segs_meta_ab[clip_metadata_inds]
+
+            gt_file = np.load(os.path.join("data/AIHub/gt", clip))
+            clip_gt = np.zeros_like(gt_file)
+            
+            # GT 파일에서 이상 여부 확인하여 레이블 생성
+            for frame_idx, abnormal in enumerate(gt_file):
+                if abnormal == 1:
+                    # 이상이 감지된 프레임의 메타데이터 인덱스 확인
+                    frame_metadata_inds = np.where((clip_metadata[:, 3].astype(int) == frame_idx))[0]
+                    if len(frame_metadata_inds) > 0:
+                        # 감지된 프레임에 해당하는 메타데이터의 인덱스에 대해 레이블을 -1로 설정
+                        labels[frame_metadata_inds] = -1
+
     return labels[:, 0, 0, 0]
 
 
