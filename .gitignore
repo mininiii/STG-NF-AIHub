@@ -204,3 +204,4 @@ data/UBnormal/pose/
 data/AIHub/pose/
 runs/*
 data/exp_dir/*
+data/AIHub*
